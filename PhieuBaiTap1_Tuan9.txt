@@ -1,0 +1,76 @@
+CREATE TABLE Hang (
+    Mahang VARCHAR2(5) PRIMARY KEY,
+    Tenhang VARCHAR2(50),
+    Soluong NUMBER,
+    Giaban NUMBER
+);
+
+CREATE TABLE Hoadon (
+    Mahd VARCHAR2(5) PRIMARY KEY,
+    Mahang VARCHAR2(5),
+    Soluongban NUMBER,
+    Ngayban DATE,
+    CONSTRAINT fk_hd_hang
+    FOREIGN KEY (Mahang)
+    REFERENCES Hang(Mahang)
+);
+
+INSERT INTO Hang VALUES ('H01','Laptop',50,15000000);
+INSERT INTO Hang VALUES ('H02','Chuột',200,200000);
+INSERT INTO Hang VALUES ('H03','Bàn phím',100,500000);
+COMMIT;
+select * from hang
+
+CREATE OR REPLACE TRIGGER trg_hoadon_insert
+BEFORE INSERT ON Hoadon
+FOR EACH ROW
+DECLARE
+    v_soluong NUMBER;
+BEGIN
+    SELECT Soluong INTO v_soluong
+    FROM Hang
+    WHERE Mahang = :NEW.Mahang;
+
+    IF :NEW.Soluongban > v_soluong THEN
+        RAISE_APPLICATION_ERROR(-20001,'Khong du hang trong kho');
+    END IF;
+
+    UPDATE Hang
+    SET Soluong = Soluong - :NEW.Soluongban
+    WHERE Mahang = :NEW.Mahang;
+
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        RAISE_APPLICATION_ERROR(-20002,'Ma hang khong ton tai');
+END;
+/
+INSERT INTO Hoadon VALUES ('HD01','H01',5,SYSDATE);
+SELECT * FROM Hang;
+
+
+CREATE OR REPLACE TRIGGER trg_hoadon_delete
+AFTER DELETE ON Hoadon
+FOR EACH ROW
+BEGIN
+    UPDATE Hang
+    SET Soluong = Soluong + :OLD.Soluongban
+    WHERE Mahang = :OLD.Mahang;
+END;
+/
+DELETE FROM Hoadon WHERE Mahd='HD01';
+select * from hang
+
+CREATE OR REPLACE TRIGGER trg_update_hoadon
+BEFORE UPDATE ON Hoadon
+FOR EACH ROW
+BEGIN
+    UPDATE Hang
+    SET Soluong = Soluong - (:NEW.Soluongban - :OLD.Soluongban)
+    WHERE Mahang = :NEW.Mahang;
+END;
+/
+
+UPDATE Hoadon
+SET Soluongban = 8
+WHERE Mahd = 'HD01';
+SELECT * FROM Hang;

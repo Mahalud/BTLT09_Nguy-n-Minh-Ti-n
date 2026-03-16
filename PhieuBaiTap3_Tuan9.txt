@@ -1,0 +1,118 @@
+CREATE TABLE Lophoc(
+Malop VARCHAR2(10) PRIMARY KEY,
+Tenlop VARCHAR2(50),
+Sisotoida NUMBER,
+Sisohientai NUMBER
+);
+
+CREATE TABLE Dangky(
+Madk VARCHAR2(10) PRIMARY KEY,
+Masv VARCHAR2(10),
+Malop VARCHAR2(10),
+Ngaydangky DATE,
+FOREIGN KEY (Malop) REFERENCES Lophoc(Malop)
+);
+
+INSERT INTO Lophoc VALUES ('L01','CSDL',3,0);
+INSERT INTO Lophoc VALUES ('L02','Java',2,0);
+COMMIT;
+SELECT * FROM Lophoc;
+
+CREATE OR REPLACE TRIGGER trg_dangky_insert
+BEFORE INSERT ON Dangky
+FOR EACH ROW
+DECLARE
+v_count NUMBER;
+v_siso NUMBER;
+v_toida NUMBER;
+BEGIN
+SELECT COUNT(*)
+INTO v_count
+FROM Lophoc
+WHERE Malop = :NEW.Malop;
+IF v_count = 0 THEN
+RAISE_APPLICATION_ERROR(-20001,'Lop khong ton tai');
+END IF;
+SELECT COUNT(*)
+INTO v_count
+FROM Dangky
+WHERE Masv = :NEW.Masv
+AND Malop = :NEW.Malop;
+IF v_count > 0 THEN
+RAISE_APPLICATION_ERROR(-20002,'Sinh vien da dang ky lop nay');
+END IF;
+SELECT Sisohientai,Sisotoida
+INTO v_siso,v_toida
+FROM Lophoc
+WHERE Malop = :NEW.Malop;
+IF v_siso >= v_toida THEN
+RAISE_APPLICATION_ERROR(-20003,'Lop da day');
+END IF;
+UPDATE Lophoc
+SET Sisohientai = Sisohientai + 1
+WHERE Malop = :NEW.Malop;
+END;
+/
+
+INSERT INTO Dangky
+VALUES ('DK01','SV01','L01',SYSDATE);
+SELECT * FROM Lophoc;
+
+CREATE OR REPLACE TRIGGER trg_dangky_delete
+AFTER DELETE ON Dangky
+FOR EACH ROW
+BEGIN
+UPDATE Lophoc
+SET Sisohientai = Sisohientai - 1
+WHERE Malop = :OLD.Malop;
+END;
+/
+
+DELETE FROM Dangky
+WHERE Madk = 'DK01';
+SELECT * FROM Lophoc;
+
+CREATE OR REPLACE TRIGGER trg_dangky_update
+BEFORE UPDATE ON Dangky
+FOR EACH ROW
+DECLARE
+v_count NUMBER;
+v_siso NUMBER;
+v_toida NUMBER;
+BEGIN
+SELECT COUNT(*)
+INTO v_count
+FROM Lophoc
+WHERE Malop = :NEW.Malop;
+IF v_count = 0 THEN
+RAISE_APPLICATION_ERROR(-20004,'Lop moi khong ton tai');
+END IF;
+SELECT COUNT(*)
+INTO v_count
+FROM Dangky
+WHERE Masv = :NEW.Masv
+AND Malop = :NEW.Malop;
+IF v_count > 0 THEN
+RAISE_APPLICATION_ERROR(-20005,'Sinh vien da o lop nay');
+END IF;
+SELECT Sisohientai,Sisotoida
+INTO v_siso,v_toida
+FROM Lophoc
+WHERE Malop = :NEW.Malop;
+IF v_siso >= v_toida THEN
+RAISE_APPLICATION_ERROR(-20006,'Lop moi da day');
+END IF;
+UPDATE Lophoc
+SET Sisohientai = Sisohientai - 1
+WHERE Malop = :OLD.Malop;
+UPDATE Lophoc
+SET Sisohientai = Sisohientai + 1
+WHERE Malop = :NEW.Malop;
+END;
+/
+
+INSERT INTO Dangky VALUES('DK02','SV01','L01',SYSDATE);
+UPDATE Dangky
+SET Malop = 'L02'
+WHERE Madk = 'DK02';
+SELECT * FROM Lophoc;
